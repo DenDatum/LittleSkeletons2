@@ -51,14 +51,14 @@ app.use(express.static(
 ));
 app.get("/", (req, res) =>{
    res.render("home", {
-       title:"Главная Страница"
+       title:"Главная Страница",
+       user:req.session.user,
    });
 });
 app.get("/", (req, res) =>{
-    res.render("about", {
-        title:"1 Страница",
-        DESTRUCTION:"Бум-бум-бум"
-    });
+  if(!req.session.user){
+      return res.redirect
+  }
  });
 
 
