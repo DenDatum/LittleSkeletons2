@@ -112,7 +112,7 @@ app.get("/", (req, res) =>{
         const {loglog, logpas} = req.body;
     const users = await readData();
     const namedate = users.find(u => u.loglog === loglog); 
-    const pasdate = await bcrypt
+    const pasdate = bcrypt
     if(namedata ){
         
     } else{
