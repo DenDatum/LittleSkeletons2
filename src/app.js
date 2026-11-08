@@ -76,57 +76,34 @@ app.get("/", (req, res) =>{
     });
  });
 
- router.post("/registration", async(req, res) =>{
-     try{
-         const {reglog, regpas1, regpas2 } = req.body;
-    
-      
-     const users = await readData();
-     const namedate = users.find(u => u.reglog === reglog); 
-      
-      if(namedata){
-          return res.render('registration', {error:'-'}); //пользователь имя есть 
-      }
+app.post('/login', (req,res) =>{
+    const {email, password} = req.body;
 
-      if(regpas1 === regpas2) {
-          return res.render('registration', {reglog});
-      }
+    const user = users.find(
+        (item) => 
+        item.email.toLowerCase() === email.toLowerCase() && 
+        item.password === password
+    );
 
-      const hashedpass = await bcrypt.hash(regpas1, 10);
-      const newUser ={
-          "id": Date.now().toString, //Крутые цифры!
-          "name":reglog,
-          "password":hashedpass
-      };
-      users.push(newUser);
-      await writeFile(newUser);
-      
- }catch(error){
-    return res.render('registration', {error:'-'}); 
+    if(!user) {
+        return res.removeListener('login', {
+            title:' ',
+            error:'',
+        });
     }
- });
 
+    req.session.user ={
+        username: user.username,
+        email: user.email,
+    };
 
- router.post("/login", async(req, res) =>{
-    try{
-        const {loglog, logpas} = req.body;
-    const users = await readData();
-    const namedate = users.find(u => u.loglog === loglog); 
-    const pasdate = bcrypt
-    if(namedata ){
-        
-    } else{
-        return error();
-    }
+    res.redirect('/');
+    });
     
-     
-}catch(error){
-   return res.render('registration', {error:'-'}); 
-   }
-});
+    app.post('/logout', (req, res) => {
+        req.session.destroy(() => {
+            res.redirect('/login');
+        });
+    });
 
- const sortedProducts = [...products].sort((a,b) => a.price - b.price);
-app.listen(3000, () => {
-    console.log("Cервер запущен: http://localhost:3000");
-});
-export default app;
+    module.exports = app;
