@@ -2,28 +2,32 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{title}}</title>
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <header>
-        {{>menu}}
-        <h1> Мой Плейлист </h1>
-        <nav>
-            <a href="/">Главная</a>
-            <a href="/music">Песни</a>
-            <a href="/login">Войти</a>
+        <nav class="navbar">
+            <div class="logo">MyApp</div>
+            <div class="nav-links">
+                {{#if user}}
+                    <a href="/">Главная</a>
+         
+                    <form action="/logout" method="POST" style="display:inline;">
+                        <button type="submit" class="btn-link">Выйти</button>
+                    </form>
+                {{else}}
+                    <a href="/login">Вход</a>
+                    <a href="/registration">Регистрация</a>
+                {{/if}}
+            </div>
         </nav>
     </header>
- {{> footer}}
-<main>
-    {{{body}}}
-</main>
 
-<footer>
-    <p>Список - музыка</p>
-</footer>
- 
+    <main class="container">
+      
+        {{{body}}}
+    </main>
 </body>
 </html>

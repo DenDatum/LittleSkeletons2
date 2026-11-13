@@ -1,109 +1,128 @@
-import { DESTRUCTION } from 'dns';
-import express from 'express';
-import { write, writeFile } from 'fs';
-import { userInfo } from 'os';
-import router from './routes/tasks.js';
-import tasksRouter from "./routes/tasks.js";
-const fs = require('fs/promise');
-const {engine} = require("express-handlebars");
-const path = require("path");
-const products = require("./data/prodicts");
-handlebars.registrerPartials(__dirname + "/views/partals");
-app.get("/products", (req, res) => {
-res.render("products", {
-    title:"CT",
-    products: products
-});
-});
-
-app.engine(
-    'handlebars',
-    engine({
-        extname: '.handlebars',
-        defaultLayout:'main',
-        layoutsDir: path.join(__dirname, 'views', 'layouts'),
-        partialsDir: path.join(__dirname, 'views',' partials'),
-    })
-);
-
-app.set('view engine', 'handlebars');
-app.set('views', path.join(__dirname, 'views'));
-app.use(express.urlencoded({extended: true}));
-app.use(express.static(path.join(__dirname, '..', 'public')));
+const path = require('path');
+const express = require('express');
+const session = require('express-session');
+const { engine } = require('express-handlebars');
+const bcrypt = require('bcrypt'); 
 
 const app = express();
+const users = []; 
 
-app.use(express.json());
+app.engine('hbs', engine({
+    extname: '.hbs',
+    defaultLayout: 'main',
+    layoutsDir: path.join(__dirname, 'views', 'layouts'),
+    partialsDir: path.join(__dirname, 'views', 'partials')
+}));
+app.set('view engine', 'hbs');
+app.set('views', path.join(__dirname, 'views'));
 
-app.use('/tasks', tasksRouter);
 
-app.engine("handlebars", engine());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
-app.set("view engine", "handlebars");
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'secret',
+    resave: false,
+    saveUninitialized: false
+}));
 
-app.set(
-    "views",
-    path.join(__dirname, "views")
-);
 
-app.use(express.static(
- path.join(__dirname,"../public")
-));
-app.get("/", (req, res) =>{
-   res.render("home", {
-       title:"Главная Страница",
-       user:req.session.user,
-   });
+
+app.get('/', (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+    res.render('home', {
+        title: 'Главная страница',
+        user: req.session.user
+    });
 });
-app.get("/", (req, res) =>{
-  if(!req.session.user){
-      return res.redirect
-  }
- });
 
 
- app.get("/login", (req, res) =>{
-    res.render("login", {
-        title:"Войти",
-        DESTRUCTION:""
+app.get('/registration', (req, res) => {
+    res.render('registration', {
+        title: 'Регистрация',
+        error: null
     });
- });
+});
 
- app.get("/registration", (req, res) =>{
-    res.render("registration", {
-        title:"Регестрация",
-        DESTRUCTION:""
-    });
- });
 
-app.post('/login', (req,res) =>{
-    const {email, password} = req.body;
+app.post('/registration', async (req, res) => {
 
-    const user = users.find(
-        (item) => 
-        item.email.toLowerCase() === email.toLowerCase() && 
-        item.password === password
-    );
+    const { username, email, password, passConf } = req.body;
 
-    if(!user) {
-        return res.removeListener('login', {
-            title:' ',
-            error:'',
+    const userExists = users.find((item) => item.email.toLowerCase() === email.toLowerCase());
+    if (userExists) {
+        return res.render('registration', {
+            title: 'Регистрация',
+            error: 'Пользователь с таким email уже существует.'
         });
     }
 
-    req.session.user ={
+    if (password !== passConf) {
+        return res.render('registration', {
+            title: 'Регистрация',
+            error: 'Пароли не совпадают.'
+        });
+    }
+
+    try {
+        
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        users.push({
+            username: username,
+            email: email.toLowerCase(),
+            password: hashedPassword
+        });
+
+        res.redirect('/login');
+    } catch (error) {
+        return res.render('registration', { title: 'Регистрация', error: 'Ошибка при регистрации.' });
+    }
+});
+
+app.get('/login', (req, res) => {
+    res.render('login', {
+        title: 'Вход',
+        error: null
+    });
+});
+
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+
+    const user = users.find((item) => item.email.toLowerCase() === email.toLowerCase());
+
+    if (!user) {
+        return res.render('login', {
+            title: 'Вход',
+            error: 'Неверный email или пароль.'
+        });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+        return res.render('login', {
+            title: 'Вход',
+            error: 'Неверный email или пароль.'
+        });
+    }
+
+    req.session.user = {
         username: user.username,
-        email: user.email,
+        email: user.email
     };
 
     res.redirect('/');
-    });
-    
-    app.post('/logout', (req, res) => {
-        req.session.destroy(() => {
-            res.redirect('/login');
-        });
-    });
+});
 
-    module.exports = app;
+
+app.post('/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.redirect('/login');
+    });
+});
+
+module.exports = app;
